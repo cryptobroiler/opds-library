@@ -13,5 +13,7 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/opds-library/lib/commons-io-2.0-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/sqlitejdbc-v056.jar"/>
+	<classpathentry kind="lib" path="lib/jregex1.2_01.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

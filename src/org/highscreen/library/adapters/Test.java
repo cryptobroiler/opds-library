@@ -10,6 +10,7 @@ public class Test {
 		//FlibustaLibraryAdapter fla = new FlibustaLibraryAdapter();
 		try {
 			FlibustaLibraryAdapter.fetchFlibustaDB();
+			FlibustaLibraryAdapter.testDb();
 			//FlibustaLibraryAdapter.testExtractSQLQuery();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
