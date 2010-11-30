@@ -7,15 +7,12 @@ public class Test {
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		//FlibustaLibraryAdapter fla = new FlibustaLibraryAdapter();
-		try {
-			FlibustaLibraryAdapter.fetchFlibustaDB();
-			FlibustaLibraryAdapter.testDb();
-			//FlibustaLibraryAdapter.testExtractSQLQuery();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		// FlibustaLibraryAdapter fla = new FlibustaLibraryAdapter();
+
+		FlibustaLibraryAdapter.fetchFlibustaDB();
+		new FlibustaLibraryAdapter().mkdb();
+		// FlibustaLibraryAdapter.testExtractSQLQuery();
+
 	}
 
 }
