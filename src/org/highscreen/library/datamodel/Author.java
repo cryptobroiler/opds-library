@@ -1,15 +1,21 @@
 package org.highscreen.library.datamodel;
 
 import java.util.List;
-import java.util.Vector;
 
 public class Author {
 	private String id;
-	private String name;
-	private List<Book> books = new Vector<Book>();
+	private String firstName;
+	private String lastName;
+	private String middleName;
+	private List<Book> books;
 
-	public Author(String name) {
-		this.name = name;
+	public Author(String id, String firstName, String middleName,
+			String lastName, List<Book> books) {
+		this.id = id;
+		this.firstName = firstName;
+		this.middleName = middleName;
+		this.lastName = lastName;
+		this.books = books;
 	}
 
 	public void addBook(Book book) {
@@ -21,7 +27,11 @@ public class Author {
 	}
 
 	public String getName() {
-		return name;
+		return firstName;
+	}
+
+	public String toString() {
+		return id + ": " + firstName + " " + middleName + " " + lastName;
 	}
 
 }
