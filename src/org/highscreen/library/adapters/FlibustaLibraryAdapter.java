@@ -34,11 +34,10 @@ public class FlibustaLibraryAdapter implements LibraryAdapter {
 	private static final Logger logger = Logger
 			.getLogger(FlibustaLibraryAdapter.class);
 
-	private static final String dbUrl = "http://93.174.93.47/sql/";
+	//private static final String dbUrl = "http://93.174.93.47/sql/";
 	// private static final String dbUrl = "http://overlord.local:8000/";
 
-	// private static final String dbUrl =
-	// "http://abomination.vobis.local:8000/";
+	private static final String dbUrl = "http://abomination.vobis.local/sql/";
 	private static final String[] filenames = { "lib.libavtorname.sql",
 			"lib.libavtor.sql", "lib.libbook.sql", };
 	private static final int FLIBUSTA_SOURCE_ID = 0;
@@ -63,21 +62,28 @@ public class FlibustaLibraryAdapter implements LibraryAdapter {
 			+ "  `SourceId` integer NOT NULL DEFAULT '0'   ,                      "
 			+ "  `RemoteId` integer  UNIQUE NOT NULL  " + ");";
 
-	private static String getRelativePath(String filename) {
-		String dir = "./adapters/"
-				+ FlibustaLibraryAdapter.class.getSimpleName() + "/";
-		File path = new File(dir);
-		if (!path.exists()) {
-			boolean result = path.mkdirs();
-			logger.trace("Creating directories: " + result);
+	protected static void convertToSQLite(File file) throws Exception {
+		logger.debug("Extracting values");
+		Pattern p = new Pattern(".*INSERT.*");
+		Matcher m = p.matcher(FileUtils.readFileToString(file));
+		String result = "";
+		while (m.find()) {
+			logger.trace("Found group");
+			result = result + m.toString();
 		}
-		return dir + filename;
+		result = result.replaceAll("\\),\\(", "\n");
+		result = result.replaceAll("\\\\'", "");
+		result = result.replaceAll("\\);INSERT", "\nINSERT");
+		result = result.replaceAll("INSERT INTO `"
+				+ file.getName().split("\\.")[1] + "` VALUES \\(", "");
+		result = result.replaceAll("\\);$", "");
+		File sqliteFile = new File(file.getPath() + "values");
+		FileUtils.writeStringToFile(sqliteFile, result);
 	}
 
+
 	protected static void fetchFlibustaDB() throws Exception {
-
 		for (String f : filenames) {
-
 			File file = new File(getRelativePath(f));
 			long localTimestamp = file.lastModified();
 			logger.debug("Local timestamp of " + f + ":" + localTimestamp);
@@ -109,64 +115,15 @@ public class FlibustaLibraryAdapter implements LibraryAdapter {
 		}
 	}
 
-	protected static String extractSQLQuery(FileInputStream fis)
-			throws Exception {
-		GZIPInputStream gzipInputStream = new GZIPInputStream(
-				new BufferedInputStream(fis));
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		byte[] buf = new byte[16 * 1024];
-		int count;
-		while ((count = gzipInputStream.read(buf)) > 0) {
-			baos.write(buf, 0, count);
+	private static String getRelativePath(String filename) {
+		String dir = "./adapters/"
+				+ FlibustaLibraryAdapter.class.getSimpleName() + "/";
+		File path = new File(dir);
+		if (!path.exists()) {
+			boolean result = path.mkdirs();
+			logger.trace("Creating directories: " + result);
 		}
-		// logger.debug(sb.toString());
-		return baos.toString("UTF-8");
-	}
-
-	protected static void convertToSQLite(File file) throws Exception {
-		logger.debug("Extracting values");
-		Pattern p = new Pattern(".*INSERT.*");
-		Pattern vp = new Pattern("\\(.*?\\)");
-
-		Matcher m = p.matcher(FileUtils.readFileToString(file));
-		Matcher matcher = vp.matcher("");
-		String result = "";
-		while (m.find()) {
-			logger.trace("Found group");
-			result = result + m.toString();
-		}
-		result = result.replaceAll("\\),\\(", "\n");
-		result = result.replaceAll("\\\\'", "");
-		result = result.replaceAll("\\);INSERT", "\nINSERT");
-		result = result.replaceAll("INSERT INTO `"
-				+ file.getName().split("\\.")[1] + "` VALUES \\(", "");
-		result = result.replaceAll("\\);$", "");
-		// result = result.replaceAll("'", "");
-		// result = result.replaceAll("','", ";");
-		// result = result.replaceAll("',",";");
-		// result = result.replaceAll(",'",";");
-
-		File sqliteFile = new File(file.getPath() + "values");
-		// p = Pattern.compile("\\(.*?\\)");
-		// m = p.matcher(result);
-		// String values = "";
-		// long count = 0;
-		// while(m.find()) {
-		// values += m.group();
-		// logger.trace(count++);
-		// }
-		FileUtils.writeStringToFile(sqliteFile, result);
-
-	}
-
-	protected static void testExtractSQLQuery() {
-		try {
-			for (String f : filenames) {
-				// logger.trace(extractSQLQuery(new FileInputStream(f)));
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		return dir + filename;
 	}
 
 	private static List<String> parseValue(String value) {
@@ -225,8 +182,9 @@ public class FlibustaLibraryAdapter implements LibraryAdapter {
 			runner.update(conn, "drop table if exists authors;");
 			runner.update(conn, "drop table if exists books;");
 			runner.update(conn, "drop table if exists tags;");
-			runner.update(conn, "drop table if exists authors_books");
+			runner.update(conn, "drop table if exists books_authors");
 			runner.update(conn, CREATE_AUTHORS);
+
 			PreparedStatement prep = conn
 					.prepareStatement("insert into authors values (?,?,?,?)");
 			BufferedReader br = new BufferedReader(new InputStreamReader(
@@ -289,11 +247,15 @@ public class FlibustaLibraryAdapter implements LibraryAdapter {
 						+ parts.get(0) + "'";
 				Object[] result = (Object[]) runner.query(conn, q, handler);
 
-				if (result != null && result.length == 1) {
-					//logger.debug(q + " result " + result[0].toString());
-					prep.setInt(1, Integer.valueOf(result[0].toString()));
-					prep.setInt(2, Integer.valueOf(parts.get(1)));
-					prep.addBatch();
+				if (result != null) {
+					if (result.length == 1) {
+						// logger.debug(q + " result " + result[0].toString());
+						prep.setInt(1, Integer.valueOf(result[0].toString()));
+						prep.setInt(2, Integer.valueOf(parts.get(1)));
+						prep.addBatch();
+					} else {
+						throw new Exception("Unexpected query result");
+					}
 				}
 			}
 			conn.setAutoCommit(false);
@@ -309,14 +271,16 @@ public class FlibustaLibraryAdapter implements LibraryAdapter {
 
 	}
 
+	
+
 	@Override
-	public List<Book> listBooks() {
+	public List<Author> listAuthors() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public List<Author> listAuthors() {
+	public List<Book> listBooks() {
 		// TODO Auto-generated method stub
 		return null;
 	}
