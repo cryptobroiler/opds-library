@@ -4,18 +4,12 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.sql.Array;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.List;
 import java.util.Vector;
 import java.util.zip.GZIPInputStream;
@@ -23,13 +17,11 @@ import java.util.zip.GZIPInputStream;
 import jregex.Matcher;
 import jregex.Pattern;
 
-import org.apache.commons.dbutils.DbUtils;
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.handlers.ArrayHandler;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.highscreen.library.database.DBController;
 import org.highscreen.library.database.SQLQuery;
+import org.highscreen.library.datamodel.Book;
 
 public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
 	private static final Logger logger = Logger
@@ -70,7 +62,7 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
 		FileUtils.writeStringToFile(sqliteFile, result);
 	}
 
-	protected static void fetchFlibustaDB(){
+	protected static void fetchFlibustaDB() {
 		try {
 			for (String f : filenames) {
 				File file = new File(getRelativeAdaptersPath(f));
@@ -83,6 +75,7 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
 				logger.debug("Remote timestamp of " + f + ":" + remoteTimestamp);
 				if (remoteTimestamp > 0) {
 					if (remoteTimestamp != localTimestamp) {
+						
 						logger.debug("Timestamps differ: downloading & gunzipping file "
 								+ url.toString());
 						InputStream is = url.openStream();
@@ -166,7 +159,7 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
 	}
 
 	public void mkdb() {
-		DBController db = DBController.getInstance(getDatabaseName());
+		DBController db = getDB();
 		PreparedStatement ps;
 		BufferedReader br;
 		List<String> parts;
@@ -191,12 +184,14 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
 				if (!parts.get(8).equals("0")) { // deleted
 					continue;
 				}
-				ps.setInt(1, Integer.valueOf(parts.get(0))); // BookID
+				int bookId = Integer.valueOf(parts.get(0));
+				String fileType = parts.get(6);
+				ps.setInt(1, bookId); // BookID
 				ps.setLong(2, Long.valueOf(parts.get(1))); // Filesize
 				ps.setString(3, parts.get(2)); // Timestamp
 				ps.setString(4, parts.get(3)); // Title
 				ps.setString(5, parts.get(4)); // Title1
-				ps.setString(6, parts.get(6)); // FileType
+				ps.setString(6, fileType); // FileType
 				ps.setInt(7, Integer.valueOf(parts.get(7))); // Year
 				ps.setString(8, parts.get(13)); // md5
 				ps.setInt(9, FLIBUSTA_SOURCE_ID); // SourceID
@@ -232,6 +227,14 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
 
 	public FlibustaLibraryAdapter() {
 		super("flibusta.db");
+		fetchFlibustaDB();
+		mkdb();
+	}
+
+	@Override
+	public String getURL(Book book) {
+		return "http://flibusta.net/b/" + book.getId() + "/"
+				+ book.getFileType();
 	}
 
 }

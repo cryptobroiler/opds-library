@@ -24,7 +24,8 @@ public enum SQLQuery {
 			"insert into authors values (?,?,?,?)"), INSERT_BOOKS(
 			"insert into books values (?,?,?,?,?,?,?,?,?)"), INSERT_BOOKS_AUTHORS(
 			"insert into books_authors values (?,?)"), SELECT_ALL_BOOKS(
-			"select * from books"), SELECT_AUTHORS_BY_BOOKID(
+			"select * from books"), SELECT_ALL_AUTHORS("select * from authors"), SELECT_BOOKS_AUTHORS(
+			"select * from books_authors"), SELECT_AUTHORS_BY_BOOKID(
 			"select authors.authorid,authors.firstname,authors.middlename,authors.lastname from authors,books,books_authors "
 					+ "where books_authors.bookid=books.bookid and books_authors.authorid = authors.authorid and books.bookid=?");
 

@@ -5,41 +5,41 @@ import java.util.List;
 import org.highscreen.library.adapters.LibraryAdapter;
 
 public class DataModel {
-	private List<Author> authors;
-	private List<Book> books;
-	private List<Tag> tags;
+	private List<Author> listOfAuthors;
+	private List<Book> listOfBooks;
+	private List<Tag> listOfTags;
 
 	private LibraryAdapter adapter;
 
 	public DataModel(LibraryAdapter adapter) {
-		clear();
 		this.adapter = adapter;
+		clear();
 	}
 
 	public void clear() {
-		authors = null;
-		books = null;
-		tags = null;
+		listOfAuthors = null;
+		listOfBooks = null;
+		listOfTags = null;
 	}
 
 	public List<Book> getListOfBooks() {
-		if (books == null) {
-			books = adapter.listBooks();
+		if (listOfBooks == null) {
+			listOfBooks = adapter.getListOfBooks();
 		}
-		return books;
+		return listOfBooks;
 	}
 
 	public List<Author> getListOfAuthors() {
-		if (authors == null) {
-			authors = adapter.listAuthors();
+		if (listOfAuthors == null) {
+			listOfAuthors = adapter.getListOfAuthors();
 		}
-		return authors;
+		return listOfAuthors;
 	}
 
 	public List<Tag> getListOfTags() {
-		if (tags == null) {
-			tags = adapter.listTags();
+		if (listOfTags == null) {
+			listOfTags = adapter.getListOfTags();
 		}
-		return tags;
+		return listOfTags;
 	}
 }

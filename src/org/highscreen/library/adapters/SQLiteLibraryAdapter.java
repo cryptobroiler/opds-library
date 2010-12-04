@@ -1,15 +1,13 @@
 package org.highscreen.library.adapters;
 
 import java.io.File;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.handlers.ArrayHandler;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.highscreen.library.database.DBController;
@@ -18,113 +16,181 @@ import org.highscreen.library.datamodel.Author;
 import org.highscreen.library.datamodel.Book;
 import org.highscreen.library.datamodel.Tag;
 
-public class SQLiteLibraryAdapter implements LibraryAdapter {
-	protected static final String DROP_BOOKS_AUTHORS = "drop table if exists books_authors";
-	protected static final String DROP_TAGS = "drop table if exists tags;";
-	protected static final String DROP_BOOKS = "drop table if exists books;";
-	protected static final String DROP_AUTHORS = "drop table if exists authors;";
+public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
 
-	protected static final String CREATE_AUTHORS = "CREATE TABLE `authors` ("
-			+ "`AuthorId` integer PRIMARY KEY ASC,"
-			+ "`FirstName` varchar(99) NOT NULL DEFAULT '',"
-			+ "`MiddleName` varchar(99) NOT NULL DEFAULT '',"
-			+ "`LastName` varchar(99) NOT NULL DEFAULT '');";
-	// + " `RemoteId` integer UNIQUE NOT NULL);";
-	protected static final String CREATE_BOOKS_AUTHORS = "CREATE TABLE `books_authors` ("
-			+ "`BookId` integer NOT NULL DEFAULT '0',"
-			+ "`AuthorId` integer NOT NULL DEFAULT '0');";
-	protected static final String CREATE_BOOKS = "CREATE TABLE `books` ("
-			+ " `BookId` integer PRIMARY KEY ASC,"
-			+ " `FileSize` integer NOT NULL DEFAULT '0',"
-			+ " `Time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-			+ " `Title` varchar(254) NOT NULL DEFAULT '',"
-			+ " `Title1` varchar(254) NOT NULL,"
-			+ " `FileType` char(4) NOT NULL,"
-			+ " `Year` integer NOT NULL DEFAULT '0',"
-			+ " `md5` char(32) NOT NULL,"
-			+ " `SourceId` integer NOT NULL DEFAULT '0');";
+	private List<Author> listOfAuthors;
+	private List<Book> listOfBooks;
+	private List<Tag> listOfTags;
+	private Map<String, Author> mapOfAuthors;
+	private Map<String, Book> mapOfBooks;
+	private Map<Author, List<Book>> mapOfBooksByAuthor;
+	private Map<String, List<Author>> mapOfAuthorsByBookId;
+
 	private static final Logger logger = Logger
 			.getLogger(SQLiteLibraryAdapter.class);
-	// + " `RemoteId` integer UNIQUE NOT NULL);";
 	private String databaseName;
 
 	public String getDatabaseName() {
 		return databaseName;
 	}
 
+	private DBController db = null;
+
 	protected void makeCleanDatabase() {
 		FileUtils.deleteQuietly(new File(databaseName));
-		DBController controller = DBController.getInstance(databaseName);
 		try {
-			controller.getPreparedStatement(SQLQuery.CREATE_AUTHORS).execute();
-			controller.getPreparedStatement(SQLQuery.CREATE_BOOKS).execute();
-			controller.getPreparedStatement(SQLQuery.CREATE_BOOKS_AUTHORS)
-					.execute();
+			db.getPreparedStatement(SQLQuery.CREATE_AUTHORS).execute();
+			db.getPreparedStatement(SQLQuery.CREATE_BOOKS).execute();
+			db.getPreparedStatement(SQLQuery.CREATE_BOOKS_AUTHORS).execute();
 		} catch (Exception e) {
 			logger.error(e);
 		}
+	}
+
+	protected DBController getDB() {
+		return db;
 	}
 
 	public SQLiteLibraryAdapter(String dbName) {
 		databaseName = dbName;
-		// makeCleanDatabase();
+		db = DBController.getInstance(dbName);
+		clear();
+		makeCleanDatabase();
 	}
 
+	private void clear() {
+		listOfAuthors = null;
+		listOfBooks = null;
+		listOfTags = null;
+		mapOfAuthorsByBookId = null;
+		mapOfAuthors = null;
+		mapOfBooks = null;
+		mapOfBooksByAuthor = null;
+	}
+	public abstract String getURL(Book book);
 	// public abstract String formHyperlink(Book book);
 	@Override
-	public List<Book> listBooks() {
-		// TODO Auto-generated method stub
-		List<Book> result = new Vector<Book>();
-		DBController db = DBController.getInstance(databaseName);
-		PreparedStatement ps;
-		try {
-			ps = db.getPreparedStatement(SQLQuery.SELECT_ALL_BOOKS);
-			ps.execute();
-			ResultSet rs = ps.getResultSet();
-			while (rs.next()) {
-				Book b = new Book(rs.getString("bookid"), rs
-						.getString("title") + rs.getString("title1"),
-						"http://flibusta.net", "0", "no summary",
-						listAuthorsByBookId(rs.getString("bookid")), "0");
-				logger.debug(b);
-				result.add(b);
+	public Map<Author,List<Book>> getMapOfBooksByAuthor(){
+		if (mapOfBooksByAuthor == null) {
+			mapOfBooksByAuthor = new HashMap<Author, List<Book>>();
+			for (Book book:getListOfBooks()) {
+				for (Author author:book.getAuthors()) {
+					List<Book> books = mapOfBooksByAuthor.get(author);
+					if(books == null) {
+						books = new Vector<Book>();
+						mapOfBooksByAuthor.put(author, books);
+					}
+					books.add(book);
+				}
 			}
-		} catch (Exception e) {
-			// TODO: handle exception
-			logger.error(e);
 		}
-		return result;
+		return mapOfBooksByAuthor;
+	}
+	@Override
+	public List<Book> getListOfBooks() {
+		// TODO Auto-generated method stub
+		if (listOfBooks == null) {
+			listOfBooks = new Vector<Book>();
+			PreparedStatement ps;
+			try {
+				ps = db.getPreparedStatement(SQLQuery.SELECT_ALL_BOOKS);
+				ResultSet rs = ps.executeQuery();
+				while (rs.next()) {	
+					String id = rs.getString("bookid");
+					String title = rs.getString("title") +  " "+ rs.getString("title1");
+					String source = rs.getString("sourceid");
+					String timestamp = rs.getString("time");
+					String fileType = rs.getString("filetype");
+					Book b = new Book(id,
+							title,
+							timestamp, "no summary", fileType, source);
+					b.setUri(getURL(b));
+					List<Author> authors = getMapOfAuthorsByBookId().get(id);
+					if(authors!=null) {
+						for (Author author:authors) {
+							b.addAuthor(author);
+						}
+					}
+					listOfBooks.add(b);
+				}
+			} catch (Exception e) {
+				logger.error(e);
+			}
+		}
+		return listOfBooks;
 	}
 
-	public List<Author> listAuthorsByBookId(String id) {
-		List<Author> result = new Vector<Author>();
-		DBController db = DBController.getInstance(databaseName);
-		PreparedStatement ps;
-		try {
-			ps = db.getPreparedStatement(SQLQuery.SELECT_AUTHORS_BY_BOOKID);
-			ps.setInt(1, Integer.valueOf(id));
-			ps.execute();
-			ResultSet rs = ps.getResultSet();
-			while (rs.next()) {
-				result.add(new Author(rs.getString("authorid"), rs
-						.getString("firstname"), rs.getString("middlename"), rs
-						.getString("lastname"), null));
+	public Map<String, List<Author>> getMapOfAuthorsByBookId() {
+		if (mapOfAuthorsByBookId == null) {
+			mapOfAuthorsByBookId = new HashMap<String, List<Author>>();
+			PreparedStatement ps;
+			try {
+				ps = db.getPreparedStatement(SQLQuery.SELECT_BOOKS_AUTHORS);
+				ResultSet rs = ps.executeQuery();
+				while (rs.next()) {
+					String bookId = rs.getString("bookid");
+					String authorId = rs.getString("authorid");
+					List<Author> authors = mapOfAuthorsByBookId.get(bookId);
+					if(authors == null) {
+						authors = new Vector<Author>();
+						mapOfAuthorsByBookId.put(bookId,authors);
+					}
+					Author author = getMapOfAuthors().get(authorId);
+					if(author != null) {
+						authors.add(author);
+					} else {
+						logger.error("No author with id=" + authorId);
+					}
+				}
+			} catch (Exception e) {
+				logger.error(e);
 			}
-		} catch (Exception e) {
-			// TODO: handle exception
-			logger.error(e);
 		}
-		return result;
+		return mapOfAuthorsByBookId;
 	}
 
 	@Override
-	public List<Author> listAuthors() {
-		// TODO Auto-generated method stub
-		return null;
+	public List<Author> getListOfAuthors() {
+		if (listOfAuthors == null) {
+			listOfAuthors = new Vector<Author>();
+			List<String> ids = new Vector<String>();
+			PreparedStatement ps;
+			try {
+				ps = db.getPreparedStatement(SQLQuery.SELECT_ALL_AUTHORS);
+				ResultSet rs = ps.executeQuery();
+				while (rs.next()) {
+					String id = rs.getString("authorid");
+					String firstname = rs.getString("firstname");
+					String middleanme = rs.getString("middlename");
+					String lastname = rs.getString("lastname");
+					if (!ids.contains(id)) {
+						ids.add(id);
+						listOfAuthors.add(new Author(id, firstname, middleanme,
+								lastname));
+					}
+				}
+			} catch (Exception e) {
+				logger.error(e);
+			}
+		}
+		return listOfAuthors;
 	}
 
+	public Map<String, Author> getMapOfAuthors() {
+		if (mapOfAuthors == null) {
+			mapOfAuthors = new HashMap<String, Author>();
+			for (Author author : getListOfAuthors()) {
+				mapOfAuthors.put(author.getId(), author);
+			}
+		}
+		return mapOfAuthors;
+	}
+
+	// public getListOfAuthorsByBookId() {
+	//
+	// }
 	@Override
-	public List<Tag> listTags() {
+	public List<Tag> getListOfTags() {
 		// TODO Auto-generated method stub
 		return null;
 	}
