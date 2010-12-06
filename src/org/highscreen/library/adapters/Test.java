@@ -19,11 +19,12 @@ public class Test {
 		//FlibustaLibraryAdapter.fetchFlibustaDB();
 		//new FlibustaLibraryAdapter().mkdb();
 		DataModel dm = new DataModel(new FlibustaLibraryAdapter());
-		List<Book> books = dm.getListOfBooks();
-		for (int i = 0; i < 100; i++) {
-			Book b = books.get(i);
-			logger.debug(b);
-		}
+//		List<Book> books = dm.getListOfBooks();
+//		for (int i = 0; i < 100; i++) {
+//			Book b = books.get(i);
+//			logger.debug(b);
+//		}
+		//FlibustaLibraryAdapter.testNewMySQLExtract();
 		// FlibustaLibraryAdapter.testExtractSQLQuery();
 
 	}

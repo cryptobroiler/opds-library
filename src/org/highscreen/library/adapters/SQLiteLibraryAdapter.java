@@ -1,6 +1,7 @@
 package org.highscreen.library.adapters;
 
 import java.io.File;
+import java.io.FileReader;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;
@@ -39,9 +40,10 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
 	protected void makeCleanDatabase() {
 		FileUtils.deleteQuietly(new File(databaseName));
 		try {
-			db.getPreparedStatement(SQLQuery.CREATE_AUTHORS).execute();
-			db.getPreparedStatement(SQLQuery.CREATE_BOOKS).execute();
-			db.getPreparedStatement(SQLQuery.CREATE_BOOKS_AUTHORS).execute();
+			// db.getPreparedStatement(SQLQuery.CREATE_AUTHORS).execute();
+			// db.getPreparedStatement(SQLQuery.CREATE_BOOKS).execute();
+			// db.getPreparedStatement(SQLQuery.CREATE_BOOKS_AUTHORS).execute();
+			db.runScript(new FileReader("res/metadata_sqlite.sql"));
 		} catch (Exception e) {
 			logger.error(e);
 		}
@@ -67,16 +69,17 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
 		mapOfBooks = null;
 		mapOfBooksByAuthor = null;
 	}
+
 	public abstract String getURL(Book book);
-	// public abstract String formHyperlink(Book book);
+
 	@Override
-	public Map<Author,List<Book>> getMapOfBooksByAuthor(){
+	public Map<Author, List<Book>> getMapOfBooksByAuthor() {
 		if (mapOfBooksByAuthor == null) {
 			mapOfBooksByAuthor = new HashMap<Author, List<Book>>();
-			for (Book book:getListOfBooks()) {
-				for (Author author:book.getAuthors()) {
+			for (Book book : getListOfBooks()) {
+				for (Author author : book.getAuthors()) {
 					List<Book> books = mapOfBooksByAuthor.get(author);
-					if(books == null) {
+					if (books == null) {
 						books = new Vector<Book>();
 						mapOfBooksByAuthor.put(author, books);
 					}
@@ -86,28 +89,28 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
 		}
 		return mapOfBooksByAuthor;
 	}
+
 	@Override
 	public List<Book> getListOfBooks() {
-		// TODO Auto-generated method stub
 		if (listOfBooks == null) {
 			listOfBooks = new Vector<Book>();
 			PreparedStatement ps;
 			try {
 				ps = db.getPreparedStatement(SQLQuery.SELECT_ALL_BOOKS);
 				ResultSet rs = ps.executeQuery();
-				while (rs.next()) {	
+				while (rs.next()) {
 					String id = rs.getString("bookid");
-					String title = rs.getString("title") +  " "+ rs.getString("title1");
+					String title = rs.getString("title") + " "
+							+ rs.getString("title1");
 					String source = rs.getString("sourceid");
 					String timestamp = rs.getString("time");
 					String fileType = rs.getString("filetype");
-					Book b = new Book(id,
-							title,
-							timestamp, "no summary", fileType, source);
+					Book b = new Book(id, title, timestamp, "no summary",
+							fileType, source);
 					b.setUri(getURL(b));
 					List<Author> authors = getMapOfAuthorsByBookId().get(id);
-					if(authors!=null) {
-						for (Author author:authors) {
+					if (authors != null) {
+						for (Author author : authors) {
 							b.addAuthor(author);
 						}
 					}
@@ -131,12 +134,12 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
 					String bookId = rs.getString("bookid");
 					String authorId = rs.getString("authorid");
 					List<Author> authors = mapOfAuthorsByBookId.get(bookId);
-					if(authors == null) {
+					if (authors == null) {
 						authors = new Vector<Author>();
-						mapOfAuthorsByBookId.put(bookId,authors);
+						mapOfAuthorsByBookId.put(bookId, authors);
 					}
 					Author author = getMapOfAuthors().get(authorId);
-					if(author != null) {
+					if (author != null) {
 						authors.add(author);
 					} else {
 						logger.error("No author with id=" + authorId);
