@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:opds="http://opds-spec.org/2010/catalog">
+  <title>Ебучий каталог</title>
+  <id>flibusta:opds</id>
+  <content type="text">Ну а что тут сказать...</content>
+  <link type="application/atom+xml;type=feed;profile=opds-catalog" rel="start" href="../catalog.xml" title="Back to main catalog" />
+  <entry>
+    <title>Ну а хули тут!</title>
+    <id>flibusta:entry</id>
+    <content type="text">Да бля, полный пиздец</content>
+    <link type="application/atom+xml;type=entry;profile=opds-catalog" href="http://www.vobis.ru" />
+  </entry>
+  <entry>
+    <title>Библиотека</title>
+    <id>flibusta:library</id>
+    <content type="text">Что, блядь, книжек захотел?</content>
+    <link type="application/atom+xml;type=entry;profile=opds-catalog" href="./lib.xml" />
+  </entry>
+</feed>
+

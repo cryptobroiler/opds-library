@@ -8,8 +8,13 @@ import org.highscreen.library.datamodel.Book;
 import org.highscreen.library.datamodel.Tag;
 
 public interface LibraryAdapter {
-	public List<Book> getListOfBooks();
-	public List<Author> getListOfAuthors();
-	public List<Tag> getListOfTags();
-	Map<Author, List<Book>> getMapOfBooksByAuthor();
+    public List<Book> getListOfBooks();
+
+    public List<Author> getListOfAuthors();
+
+    public List<Tag> getListOfTags();
+
+    public boolean isUpdateNeeded();
+
+    public Map<Author, List<Book>> getMapOfBooksByAuthor();
 }

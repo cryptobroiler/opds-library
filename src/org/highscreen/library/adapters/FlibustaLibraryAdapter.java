@@ -11,12 +11,12 @@ import java.net.URLConnection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -30,29 +30,38 @@ import org.highscreen.library.datamodel.Book;
 public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
     private static final Logger logger = Logger
             .getLogger(FlibustaLibraryAdapter.class);
-    Map<Long, Long> mapOfLocalBookIDByRemoteBookID = new HashMap<Long, Long>();
-    Map<Long, Long> mapOfLocalAuthorIDByRemoteAuthorID = new HashMap<Long, Long>();
-    Map<String, Long> mapOfLocalAuthorIDByAuthorName = new HashMap<String, Long>();
-    Map<Long, Long> mapOfRemoteGoodAuthorIDByRemoteBadAuthorID = new HashMap<Long, Long>();
-    Map<Long, Long> mapOfLocalTagIDByRemoteTagID = new HashMap<Long, Long>();
-    Map<String, Long> mapOfLocalTagIDByTagName = new HashMap<String, Long>();
-    Set<String> setOfTags = new HashSet<String>();
-    Set<String> setOfAuthorNames = new HashSet<String>();
+    private Map<Integer, Integer> mapOfLocalBookIDByRemoteBookID = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> mapOfLocalAuthorIDByRemoteAuthorID = new HashMap<Integer, Integer>();
+    private Map<String, Integer> mapOfLocalAuthorIDByAuthorName = new HashMap<String, Integer>();
+    private Map<Integer, Integer> mapOfRemoteGoodAuthorIDByRemoteBadAuthorID = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> mapOfRemoteGoodBookIDByRemoteBadBookID = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> mapOfLocalTagIDByRemoteTagID = new HashMap<Integer, Integer>();
+    private Map<String, Integer> mapOfLocalSeriesIDBySeriesName = new HashMap<String, Integer>();
+    private Map<Integer, Integer> mapOfLocalSeriesIDByRemoteSeriesID = new HashMap<Integer, Integer>();
+    private Map<String, Integer> mapOfLocalTagIDByTagName = new HashMap<String, Integer>();
     private static final String dbUrl = "http://93.174.93.47/sql/";
     private static final String[] filenames = { "lib.libavtorname.sql",
             "lib.libbook.sql", "lib.libavtor.sql", "lib.libgenrelist.sql",
             "lib.libgenre.sql", "lib.libavtoraliase.sql",
-            "lib.libtranslator.sql", "lib.libfilename.sql",
-            "lib.libjoinedbooks.sql", "lib.librate.sql", "lib.libseqname.sql",
-            "lib.libseq.sql", "lib.libsrclang.sql", "lib.b.annotations.sql",
-            "lib.b.annotations_pics.sql" };
+            "lib.libjoinedbooks.sql", "lib.libseqname.sql", "lib.libseq.sql",
+            "lib.libtranslator.sql", "lib.libfilename.sql", "lib.librate.sql",
+            "lib.libsrclang.sql", };// "lib.b.annotations.sql",
+    // "lib.b.annotations_pics.sql" };
     private static final int FLIBUSTA_SOURCE_ID = 0;
 
     void readMapOfRemoteGoodAuthorIDByRemoteBadAuthorID() {
         List<String[]> values = readValuesFromFile(filenames[5]);
         for (String[] value : values) {
             mapOfRemoteGoodAuthorIDByRemoteBadAuthorID.put(
-                    Long.valueOf(value[1]), Long.valueOf(value[2]));
+                    Integer.valueOf(value[1]), Integer.valueOf(value[2]));
+        }
+    }
+
+    void readMapOfRemoteGoodBookIDByRemoteBadBookID() {
+        List<String[]> values = readValuesFromFile(filenames[6]);
+        for (String[] value : values) {
+            mapOfRemoteGoodBookIDByRemoteBadBookID.put(
+                    Integer.valueOf(value[2]), Integer.valueOf(value[3]));
         }
     }
 
@@ -87,20 +96,11 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
                 + (System.currentTimeMillis() - start) + "ms");
     }
 
-    protected static void testNewMySQLExtract() {
-        try {
-            for (String name : filenames) {
-                extractMySQLValues(new File(getRelativeAdaptersPath(name)));
-            }
-        } catch (Exception e) {
-            // TODO: handle exception
-        }
-    }
 
-    protected static void fetchFlibustaDB() {
+    protected void fetchFlibustaDB() {
         try {
             for (String f : filenames) {
-                File file = new File(getRelativeAdaptersPath(f));
+                File file = new File(getPathToAdapter(f));
                 long localTimestamp = file.lastModified();
                 logger.debug("Local timestamp of " + f + ":" + localTimestamp);
                 URL url = new URL(dbUrl + f + ".gz");
@@ -127,19 +127,8 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
         }
     }
 
-    private static String getRelativeAdaptersPath(String filename) {
-        String dir = "./adapters/"
-                + FlibustaLibraryAdapter.class.getSimpleName() + "/";
-        File path = new File(dir);
-        if (!path.exists()) {
-            boolean result = path.mkdirs();
-            logger.trace("Creating directories: " + result);
-        }
-        return dir + filename;
-    }
-
     private static List<String> tokenizeMySQLValue(String value) {
-        Vector<String> result = new Vector<String>();
+        List<String> result = new ArrayList<String>();
         String current = "";
         boolean inString = false;
         boolean stringExit = false;
@@ -182,10 +171,10 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
         return result;
     }
 
-    private static List<String[]> readValuesFromFile(String filename) {
+    private List<String[]> readValuesFromFile(String filename) {
         List<String[]> values = null;
         try {
-            values = new Vector<String[]>();
+            values = new ArrayList<String[]>();
             BufferedReader br = getUnicodeBufferedReader(filename);
             String value;
             while ((value = br.readLine()) != null) {
@@ -197,13 +186,13 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
         return values;
     }
 
-    public long getLastBookID() {
-        long result = 0;
+    public int getLastBookID() {
+        int result = 0;
         try {
             ResultSet rs = getDB().getPreparedStatement(
                     SQLQuery.SELECT_BOOK_COUNT).executeQuery();
             while (rs.next()) {
-                result = rs.getLong(1);
+                result = rs.getInt(1);
             }
         } catch (SQLException e) {
             logger.error(e);
@@ -211,13 +200,13 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
         return result;
     }
 
-    public long getLastAuthorID() {
-        long result = 0;
+    public int getLastAuthorID() {
+        int result = 0;
         try {
             ResultSet rs = getDB().getPreparedStatement(
                     SQLQuery.SELECT_AUTHOR_COUNT).executeQuery();
             while (rs.next()) {
-                result = rs.getLong(1);
+                result = rs.getInt(1);
             }
         } catch (SQLException e) {
             logger.error(e);
@@ -225,13 +214,27 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
         return result;
     }
 
-    public long getLastTagID() {
-        long result = 0;
+    public int getLastSeriesID() {
+        int result = 0;
+        try {
+            ResultSet rs = getDB().getPreparedStatement(
+                    SQLQuery.SELECT_SERIES_COUNT).executeQuery();
+            while (rs.next()) {
+                result = rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error(e);
+        }
+        return result;
+    }
+
+    public int getLastTagID() {
+        int result = 0;
         try {
             ResultSet rs = getDB().getPreparedStatement(
                     SQLQuery.SELECT_TAG_COUNT).executeQuery();
             while (rs.next()) {
-                result = rs.getLong(1);
+                result = rs.getInt(1);
             }
         } catch (SQLException e) {
             logger.error(e);
@@ -240,52 +243,72 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
     }
 
     public void importFlibustaToSQLiteDB() {
-        DBController db = getDB();
-        PreparedStatement ps;
         List<String[]> authorsValues = readValuesFromFile(filenames[0]);
         readMapOfRemoteGoodAuthorIDByRemoteBadAuthorID();
+        readMapOfRemoteGoodBookIDByRemoteBadBookID();
         List<String[]> booksValues = readValuesFromFile(filenames[1]);
         List<String[]> books_authorsValues = readValuesFromFile(filenames[2]);
         List<String[]> tagsValues = readValuesFromFile(filenames[3]);
         List<String[]> books_tagsValues = readValuesFromFile(filenames[4]);
-        long start;
-        long miss;
+        List<String[]> seriesValues = readValuesFromFile(filenames[7]);
+        List<String[]> books_seriesValues = readValuesFromFile(filenames[8]);
+        Map<Integer, Map<String, String>> localBooksValues = new HashMap<Integer, Map<String, String>>();
+        Map<Integer, Map<String, String>> localAuthorsValues = new HashMap<Integer, Map<String, String>>();
+        Map<Integer, Map<String, String>> localBooksAuthorsValues = new HashMap<Integer, Map<String, String>>();
+        Map<Integer, Map<String, String>> localTagsValues = new HashMap<Integer, Map<String, String>>();
+        Map<Integer, Map<String, String>> localBooksTagsValues = new HashMap<Integer, Map<String, String>>();
+        Map<Integer, Map<String, String>> localSeriesValues = new HashMap<Integer, Map<String, String>>();
+        Map<Integer, Map<String, String>> localBooksSeriesValues = new HashMap<Integer, Map<String, String>>();
+        long start = 0;
+        int miss = 0, dups = 0, bads = 0, key = 0;
         try {
-            db.enableAutoCommit(false);
-            ps = db.getPreparedStatement(SQLQuery.INSERT_BOOKS);
-            long counter = getLastBookID() + 1;
+            start = logImportPrologue("libbook", "book");
+            key = getLastBookID() + 1;
             for (String[] value : booksValues) {
                 if (!value[8].equals("0")) {
+                    bads++;
                     continue;
                 }
-                int bookID = Integer.valueOf(value[0]);
+                Integer remoteBookID = Integer.valueOf(value[0]);
+                if (mapOfRemoteGoodBookIDByRemoteBadBookID
+                        .containsKey(remoteBookID)) {
+                    // Book entry is marked as 'bad' so skip it
+                    bads++;
+                    continue;
+                }
                 String fileType = value[6];
                 String title = value[3];
                 if (!value[4].isEmpty()) {
                     title += " [" + value[4] + "]";
                 }
-                String timeStamp = value[2];
-                String uri = "http://flibusta.net/b/" + String.valueOf(bookID)
-                        + "/" + fileType;
-                mapOfLocalBookIDByRemoteBookID.put(Long.valueOf(bookID),
-                        Long.valueOf(counter));
-                // ps.setInt(1, bookId); // BookID
-                ps.setString(2, title); // Filesize
-                ps.setString(3, title); // Timestamp
-                ps.setString(4, timeStamp);
-                ps.setString(5, uri); // FileType
-                ps.setString(6, "DEFAULT_SERIES_INDEX");
-                ps.setString(7, "DEFAULT_AUTHOR_SORT"); // Year
-                ps.setString(8, "0"); // md5
-                ps.setString(9, "flibusta.net"); // SourceID
-                ps.addBatch();
-                counter++;
+                String timestamp = value[2];
+                String uri = "http://flibusta.net/b/" + remoteBookID + "/"
+                        + fileType;
+                mapOfLocalBookIDByRemoteBookID.put(remoteBookID,
+                        Integer.valueOf(key));
+                Map<String, String> valuesMap = localBooksValues.get(key);
+                if (localBooksValues.get(key) == null) {
+                    valuesMap = new HashMap<String, String>();
+                    localBooksValues.put(key, valuesMap);
+                }
+                valuesMap.put("id", String.valueOf(key));
+                valuesMap.put("title", title);
+                valuesMap.put("sort", title);
+                valuesMap.put("timestamp", timestamp);
+                // valuesMap.put("uri", uri);
+                valuesMap.put("series_index", "1");
+                valuesMap.put("isbn", "");
+                valuesMap.put("lccn", "");
+                valuesMap.put("path", uri);
+                key++;
             }
-            ps.executeBatch();
-            ps = db.getPreparedStatement(SQLQuery.INSERT_AUTHORS);
-            counter = getLastAuthorID() + 1;
+            logImportEpilogue(start, miss, dups, bads, key);
+            start = logImportPrologue("libavtorname", "authors");
+            key = getLastAuthorID() + 1;
+            bads = dups = miss = 0;
             for (String[] value : authorsValues) {
-                Long authorID = Long.valueOf(value[0]);
+                Integer remoteAuthorID = Integer.valueOf(value[0]);
+                Integer localAuthorID = Integer.valueOf(key);
                 String name = value[1];
                 String sort = value[1];
                 if (!value[2].isEmpty()) {
@@ -299,188 +322,296 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
                 name = name.trim();
                 sort = sort.trim();
                 if (mapOfRemoteGoodAuthorIDByRemoteBadAuthorID
-                        .containsKey(authorID)) { // Author entry is marked as
-                                                  // 'bad'
-                    logger.debug("Found bad author entry [skipping]: "
-                            + authorID);
+                        .containsKey(remoteAuthorID)) { // Author entry is
+                                                        // marked as `bad`
+                    bads++;
                     continue;
                 }
-                if (setOfAuthorNames.add(name.toLowerCase())) { // new
-                    mapOfLocalAuthorIDByRemoteAuthorID.put(authorID,
-                            Long.valueOf(counter));
+                if (!mapOfLocalAuthorIDByAuthorName.containsKey(name
+                        .toLowerCase())) { // new
+                    mapOfLocalAuthorIDByRemoteAuthorID.put(remoteAuthorID,
+                            localAuthorID);
                     mapOfLocalAuthorIDByAuthorName.put(name.toLowerCase(),
-                            Long.valueOf(counter));
-                    ps.setString(2, name);
-                    ps.setString(3, sort);
-                    ps.addBatch();
-                    counter++;
-                } else {
-                    logger.debug("Duplicate entry: " + name.toLowerCase()
-                            + " counter:" + counter);
-                    if (mapOfRemoteGoodAuthorIDByRemoteBadAuthorID
-                            .containsKey(authorID)) {
-                        logger.debug("bad author");
+                            localAuthorID);
+                    Map<String, String> valuesMap = localAuthorsValues.get(key);
+                    if (valuesMap == null) {
+                        valuesMap = new HashMap<String, String>();
+                        localAuthorsValues.put(key, valuesMap);
                     }
-                    mapOfLocalAuthorIDByRemoteAuthorID.put(authorID,
+                    valuesMap.put("id", String.valueOf(key));
+                    valuesMap.put("name", name);
+                    valuesMap.put("sort", sort);
+                    key++;
+                } else {
+                    // logger.debug("Duplicate entry: " + name.toLowerCase()
+                    // + " counter:" + key);
+                    mapOfLocalAuthorIDByRemoteAuthorID.put(remoteAuthorID,
                             mapOfLocalAuthorIDByAuthorName.get(name
                                     .toLowerCase()));
+                    dups++;
                 }
             }
-            ps.executeBatch();
-            ps = db.getPreparedStatement(SQLQuery.INSERT_BOOKS_AUTHORS);
+            logImportEpilogue(start, miss, dups, bads, key);
+            start = logImportPrologue("libavtor", "books_author");
             Set<String> dupSet = new HashSet<String>();
+            dups = miss = bads = 0;
+            key = 1;
             for (String[] value : books_authorsValues) {
-                Long remoteBookID = Long.valueOf(value[0]);
-                Long remoteAuthorID = Long.valueOf(value[1]);
+                Integer remoteBookID = Integer.valueOf(value[0]);
+                Integer remoteAuthorID = Integer.valueOf(value[1]);
                 if (mapOfRemoteGoodAuthorIDByRemoteBadAuthorID
                         .containsKey(remoteAuthorID)) {
                     // Author entry is marked as 'bad' so replace it with 'good'
                     remoteAuthorID = mapOfRemoteGoodAuthorIDByRemoteBadAuthorID
                             .get(remoteAuthorID);
+                    bads++;
                 }
-                Long localBookID = mapOfLocalBookIDByRemoteBookID
+                if (mapOfRemoteGoodBookIDByRemoteBadBookID
+                        .containsKey(remoteBookID)) {
+                    // Book entry is marked as 'bad' so replace it with 'good'
+                    remoteBookID = mapOfRemoteGoodBookIDByRemoteBadBookID
+                            .get(remoteBookID);
+                    bads++;
+                }
+                Integer localBookID = mapOfLocalBookIDByRemoteBookID
                         .get(remoteBookID);
-                Long localAuthorID = mapOfLocalAuthorIDByRemoteAuthorID
+                Integer localAuthorID = mapOfLocalAuthorIDByRemoteAuthorID
                         .get(remoteAuthorID);
                 if (localBookID == null || localAuthorID == null) {
-                    logger.warn("Pair match not found for: (bookID="
-                            + remoteBookID + "; authorID=" + remoteAuthorID
-                            + ")");
+                    miss++;
                     continue;
                 }
                 String pair = localBookID + " " + localAuthorID;
                 if (!dupSet.add(pair)) {
-                    logger.warn("Duplicate pair:" + pair);
+                    // logger.warn("Duplicate pair:" + pair);
+                    dups++;
                     continue;
                 }
-                ps.setInt(2, localBookID.intValue());
-                ps.setInt(3, localAuthorID.intValue());
-                ps.addBatch();
+                Map<String, String> valuesMap = localBooksAuthorsValues
+                        .get(key);
+                if (valuesMap == null) {
+                    valuesMap = new HashMap<String, String>();
+                    localBooksAuthorsValues.put(key, valuesMap);
+                }
+                valuesMap.put("id", String.valueOf(key));
+                valuesMap.put("book", String.valueOf(localBookID));
+                valuesMap.put("author", String.valueOf(localAuthorID));
+                Map<String, String> bookValue = localBooksValues
+                        .get(localBookID);
+                if (bookValue != null) {
+                    if (!bookValue.containsKey("author_sort")) {
+                        Map<String, String> authorValue = localAuthorsValues
+                                .get(localAuthorID);
+                        if (authorValue != null) {
+                            if (authorValue.containsKey("sort")) {
+                                bookValue.put("author_sort",
+                                        authorValue.get("sort"));
+                            }
+                        }
+                    }
+                }
+                key++;
             }
-            ps.executeBatch();
+            logImportEpilogue(start, miss, dups, bads, key);
             // import genresnames to tags
-            logger.info("Importing libgenrelist to tags start at" + (start=System.currentTimeMillis())+"ms");
-
-            ps = db.getPreparedStatement(SQLQuery.INSERT_TAGS);
-            miss=0;
-            counter = getLastTagID() + 1;
+            start = logImportPrologue("libgenrelist", "tags");
+            miss = dups = bads = 0;
+            key = getLastTagID() + 1;
             for (String[] value : tagsValues) {
-                Long remoteTagID = Long.valueOf(value[0]);
+                Integer remoteTagID = Integer.valueOf(value[0]);
                 String genre = value[2];
                 String meta = value[3];
                 String tag = meta + ":" + genre;
-                if (setOfTags.add(tag.toLowerCase())) { // new tag value
+                if (!mapOfLocalTagIDByTagName.containsKey(tag.toLowerCase())) { // new
+                                                                                // tag
+                                                                                // value
                     mapOfLocalTagIDByRemoteTagID.put(remoteTagID,
-                            Long.valueOf(counter));
+                            Integer.valueOf(key));
                     mapOfLocalTagIDByTagName.put(tag.toLowerCase(),
-                            Long.valueOf(counter));
-                    ps.setString(2, tag);
-                    ps.addBatch();
-                    counter++;
+                            Integer.valueOf(key));
+                    Map<String, String> valuesMap = localTagsValues.get(key);
+                    if (valuesMap == null) {
+                        valuesMap = new HashMap<String, String>();
+                        localTagsValues.put(key, valuesMap);
+                    }
+                    valuesMap.put("id", String.valueOf(key));
+                    valuesMap.put("name", tag);
+                    key++;
                 } else { // duplicate
-                    logger.debug("Duplicate TAG entry:" + tag.toLowerCase()
-                            + " counter: " + counter);
+                    // logger.debug("Duplicate TAG entry:" + tag.toLowerCase()
+                    // + " counter: " + key);
                     mapOfLocalTagIDByRemoteTagID.put(remoteTagID,
                             mapOfLocalTagIDByTagName.get(tag.toLowerCase()));
-                    miss++;
+                    dups++;
                 }
             }
-            logger.info("Import complete in: " + (System.currentTimeMillis()-start) + "ms; " + miss + " duplicate values bypassed");
-
-            ps.executeBatch();
+            logImportEpilogue(start, miss, dups, bads, key);
             // import genres to books_tags
-            logger.info("Importing libgenre to books_tags start at" + (start=System.currentTimeMillis())+"ms");
-            ps = db.getPreparedStatement(SQLQuery.INSERT_BOOKS_TAGS);
-            miss = 0;
+            start = logImportPrologue("libgenre", "books_tags");
+            key = 1;
+            miss = bads = dups = 0;
+            dupSet.clear();
             for (String[] value : books_tagsValues) {
-                Long remoteBookID = Long.valueOf(value[1]);
-                Long remoteTagID = Long.valueOf(value[2]);
-                Long localBookID = mapOfLocalBookIDByRemoteBookID
+                Integer remoteBookID = Integer.valueOf(value[1]);
+                Integer remoteTagID = Integer.valueOf(value[2]);
+                if (mapOfRemoteGoodBookIDByRemoteBadBookID
+                        .containsKey(remoteBookID)) {
+                    // Book entry is marked as 'bad' so replace it with 'good'
+                    remoteBookID = mapOfRemoteGoodBookIDByRemoteBadBookID
+                            .get(remoteBookID);
+                    bads++;
+                }
+                Integer localBookID = mapOfLocalBookIDByRemoteBookID
                         .get(remoteBookID);
-                Long localTagID = mapOfLocalTagIDByRemoteTagID.get(remoteTagID);
+                Integer localTagID = mapOfLocalTagIDByRemoteTagID
+                        .get(remoteTagID);
                 if (localBookID == null || localTagID == null) {
-                    //logger.warn("Pair match not found for: (bookID="
-                    //        + remoteBookID + "; tagID=" + remoteTagID + ")");
+                    // logger.warn("Pair match not found for: (bookID="
+                    // + remoteBookID + "; tagID=" + remoteTagID + ")");
                     miss++;
                     continue;
                 }
-                ps.setInt(2, remoteBookID.intValue());
-                ps.setInt(3, remoteTagID.intValue());
-                ps.addBatch();
+                if (!dupSet.add(localBookID + " " + localTagID)) {
+                    dups++;
+                } else {
+                    Map<String, String> valuesMap = localBooksTagsValues
+                            .get(key);
+                    if (valuesMap == null) {
+                        valuesMap = new HashMap<String, String>();
+                        localBooksTagsValues.put(key, valuesMap);
+                    }
+                    valuesMap.put("id", String.valueOf(key));
+                    valuesMap.put("book", String.valueOf(localBookID));
+                    valuesMap.put("tag", String.valueOf(localTagID));
+                    key++;
+                }
             }
-            logger.info("Import complete in: " + (System.currentTimeMillis()-start) + "ms; " + miss + " value matches missing");
-            ps.executeBatch();
-            db.commit();
-            db.enableAutoCommit(true);
-            logger.debug(getLastAuthorID() + " authors imported");
-            logger.debug(getLastBookID() + " books imported");
-            logger.debug(getLastTagID() + " tags imported");
-        } catch (Exception e) {
-            logger.error(e);
-        }
-    }
-
-    public void mkdb() {
-        DBController db = getDB();
-        PreparedStatement ps;
-        BufferedReader br;
-        List<String> parts;
-        String value;
-        try {
-            db.enableAutoCommit(false);
-            ps = db.getPreparedStatement(SQLQuery.INSERT_AUTHORS);
-            br = getUnicodeBufferedReader(filenames[0]);
-            while ((value = br.readLine()) != null) {
-                parts = tokenizeMySQLValue(value);
-                ps.setInt(1, Integer.valueOf(parts.get(0)));
-                ps.setString(2, parts.get(1));
-                ps.setString(3, parts.get(2));
-                ps.setString(4, parts.get(3));
-                ps.addBatch();
+            logImportEpilogue(start, miss, dups, bads, key);
+            start = logImportPrologue("libseqname", "series");
+            miss = dups = bads = 0;
+            key = getLastSeriesID() + 1;
+            for (String[] value : seriesValues) {
+                Integer remoteSeriesID = Integer.valueOf(value[0]);
+                Integer localSeriesID = Integer.valueOf(key);
+                String name = value[1];
+                String sort = value[1];
+                name = name.trim();
+                sort = sort.trim();
+                if (!mapOfLocalSeriesIDBySeriesName.containsKey(name
+                        .toLowerCase())) { // new
+                    mapOfLocalSeriesIDByRemoteSeriesID.put(remoteSeriesID,
+                            localSeriesID);
+                    mapOfLocalSeriesIDBySeriesName.put(name.toLowerCase(),
+                            localSeriesID);
+                    Map<String, String> valuesMap = localSeriesValues.get(key);
+                    if (valuesMap == null) {
+                        valuesMap = new HashMap<String, String>();
+                    }
+                    valuesMap.put("id", String.valueOf(key));
+                    valuesMap.put("name", name);
+                    valuesMap.put("sort", sort);
+                    localSeriesValues.put(key, valuesMap);
+                    key++;
+                } else {
+                    // logger.debug("Duplicate entry: " + name.toLowerCase()
+                    // + " counter:" + key);
+                    mapOfLocalSeriesIDByRemoteSeriesID.put(remoteSeriesID,
+                            mapOfLocalSeriesIDBySeriesName.get(name
+                                    .toLowerCase()));
+                    dups++;
+                }
             }
-            ps.executeBatch();
-            ps = db.getPreparedStatement(SQLQuery.INSERT_BOOKS);
-            br = getUnicodeBufferedReader(filenames[1]);
-            while ((value = br.readLine()) != null) {
-                parts = tokenizeMySQLValue(value);
-                if (!parts.get(8).equals("0")) { // deleted
+            logImportEpilogue(start, miss, dups, bads, key);
+            start = logImportPrologue("libseq", "books_series");
+            key = 0;
+            miss = 0;
+            bads = 0;
+            dups = 0;
+            dupSet.clear();
+            for (String[] value : books_seriesValues) {
+                Integer remoteBookID = Integer.valueOf(value[0]);
+                Integer remoteSeriesID = Integer.valueOf(value[1]);
+                Integer remoteSeriesIndex = Integer.valueOf(value[2]);
+                if (mapOfRemoteGoodBookIDByRemoteBadBookID
+                        .containsKey(remoteBookID)) {
+                    // Book entry is marked as 'bad' so replace it with 'good'
+                    remoteBookID = mapOfRemoteGoodBookIDByRemoteBadBookID
+                            .get(remoteBookID);
+                    bads++;
+                }
+                Integer localBookID = mapOfLocalBookIDByRemoteBookID
+                        .get(remoteBookID);
+                Integer localSeriesID = mapOfLocalSeriesIDByRemoteSeriesID
+                        .get(remoteSeriesID);
+                if (localBookID == null || localSeriesID == null) {
+                    // logger.warn("Pair match not found for: (bookID="
+                    // + remoteBookID + "; tagID=" + remoteTagID + ")");
+                    miss++;
                     continue;
                 }
-                int bookId = Integer.valueOf(parts.get(0));
-                String fileType = parts.get(6);
-                ps.setInt(1, bookId); // BookID
-                ps.setLong(2, Long.valueOf(parts.get(1))); // Filesize
-                ps.setString(3, parts.get(2)); // Timestamp
-                ps.setString(4, parts.get(3)); // Title
-                ps.setString(5, parts.get(4)); // Title1
-                ps.setString(6, fileType); // FileType
-                ps.setInt(7, Integer.valueOf(parts.get(7))); // Year
-                ps.setString(8, parts.get(13)); // md5
-                ps.setInt(9, FLIBUSTA_SOURCE_ID); // SourceID
-                ps.addBatch();
+                if (!dupSet.add(localBookID + " " + localSeriesID)) {
+                    dups++;
+                } else {
+                    Map<String, String> valuesMap = localBooksSeriesValues
+                            .get(key);
+                    if (valuesMap == null) {
+                        valuesMap = new HashMap<String, String>();
+                    }
+                    valuesMap.put("id", String.valueOf(key));
+                    valuesMap.put("book", String.valueOf(localBookID));
+                    valuesMap.put("series", String.valueOf(localSeriesID));
+                    localBooksSeriesValues.put(key, valuesMap);
+                    Map<String, String> bookValue = localBooksValues
+                            .get(localBookID);
+                    if (bookValue != null) {
+                        if (bookValue.containsKey("series_index")) {
+                            bookValue.put("series_index",
+                                    String.valueOf(remoteSeriesIndex));
+                        }
+                    }
+                    key++;
+                }
             }
-            ps.executeBatch();
-            br = getUnicodeBufferedReader(filenames[2]);
-            ps = db.getPreparedStatement(SQLQuery.INSERT_BOOKS_AUTHORS);
-            while ((value = br.readLine()) != null) {
-                parts = tokenizeMySQLValue(value);
-                ps.setInt(1, Integer.valueOf(parts.get(0)));
-                ps.setInt(2, Integer.valueOf(parts.get(1)));
-                ps.addBatch();
-            }
-            ps.executeBatch();
-            db.commit();
-            db.enableAutoCommit(true);
+            logImportEpilogue(start, miss, dups, bads, key);
+            getDB().importValuesMapIntoTable(localBooksValues, "books");
+            getDB().importValuesMapIntoTable(localAuthorsValues, "authors");
+            getDB().importValuesMapIntoTable(localTagsValues, "tags");
+            getDB().importValuesMapIntoTable(localSeriesValues, "series");
+            getDB().importValuesMapIntoTable(localBooksAuthorsValues,
+                    "books_authors");
+            getDB().importValuesMapIntoTable(localBooksTagsValues, "books_tags");
+            getDB().importValuesMapIntoTable(localBooksSeriesValues,
+                    "books_series");
+            logger.debug(Integer.MAX_VALUE);
         } catch (Exception e) {
             logger.error(e);
         }
     }
 
-    private static BufferedReader getUnicodeBufferedReader(String filename) {
+    static private long logImportPrologue(String origin, String dest) {
+        long start;
+        logger.info("Importing `" + origin + "` to `" + dest + "`: start at "
+                + (start = System.currentTimeMillis()) + "ms");
+        return start;
+    }
+
+    static private void logImportEpilogue(long start, long miss, long dups,
+            long bads, long key) {
+        logger.info("Import complete in: "
+                + (System.currentTimeMillis() - start) + "ms; " + (key - 1)
+                + " entries imported" + "\n\tduplicates rate(count): "
+                + (((float) dups / (key + dups - 1)) * 100) + "%(" + dups + ")"
+                + "\n\tbad entries replace rate(count): "
+                + (((float) bads / (key - 1)) * 100) + "%(" + bads + ")"
+                + "\n\tmissed pairs rate(count): "
+                + (((float) miss / (key + miss - 1)) * 100) + "%(" + miss + ")");
+    }
+
+    private BufferedReader getUnicodeBufferedReader(String filename) {
         BufferedReader br = null;
         try {
             br = new BufferedReader(new InputStreamReader(new FileInputStream(
-                    getRelativeAdaptersPath(getValuesPath(filename))), "UTF-8"));
+                    getPathToAdapter(getValuesPath(filename))), "UTF-8"));
         } catch (Exception e) {
             logger.error(e);
         }
@@ -489,14 +620,21 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
 
     public FlibustaLibraryAdapter() {
         super("flibusta.db");
-        fetchFlibustaDB();
-        importFlibustaToSQLiteDB();
+        if (isUpdateNeeded()) {
+            fetchFlibustaDB();
+            importFlibustaToSQLiteDB();
+        }
         logger.debug("Last BookID=" + getLastBookID());
     }
 
     @Override
     public String getURL(Book book) {
-        return "http://flibusta.net/b/" + book.getId() + "/"
+        return "http://flibusta.net/b/" + book.getID() + "/"
                 + book.getFileType();
+    }
+
+    @Override
+    public boolean isUpdateNeeded() {
+        return false;
     }
 }

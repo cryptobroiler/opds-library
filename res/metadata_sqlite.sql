@@ -1,9 +1,9 @@
-CREATE TABLE authors ( id   INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE authors ( id   INTEGER PRIMARY KEY,
                               name TEXT NOT NULL COLLATE NOCASE,
                               sort TEXT COLLATE NOCASE,
                               UNIQUE(name)
                              );
-CREATE TABLE books ( id      INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE books ( id      INTEGER PRIMARY KEY,
                              title     TEXT NOT NULL DEFAULT 'Unknown' COLLATE NOCASE,
                              sort      TEXT COLLATE NOCASE,
                              timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -13,10 +13,10 @@ CREATE TABLE books ( id      INTEGER PRIMARY KEY AUTOINCREMENT,
                              isbn TEXT DEFAULT "" COLLATE NOCASE,
                              path TEXT NOT NULL DEFAULT ""
                         );
-CREATE TABLE books_authors ( id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE books_authors ( id INTEGER PRIMARY KEY,
                                           book INTEGER NOT NULL,
-                                          author INTEGER NOT NULL,
-                                          UNIQUE(book,author)
+                                          author INTEGER NOT NULL
+                                          
                                         );
 CREATE TABLE books_publishers ( id INTEGER PRIMARY KEY,
                                           book INTEGER NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE books_ratings ( id INTEGER PRIMARY KEY,
 CREATE TABLE books_series ( id INTEGER PRIMARY KEY,
                                           book INTEGER NOT NULL,
                                           series INTEGER NOT NULL,
-                                          UNIQUE(book)
+                                          UNIQUE(book,series)
                                         );
 CREATE TABLE books_tags ( id INTEGER PRIMARY KEY,
                                           book INTEGER NOT NULL,
@@ -68,7 +68,7 @@ CREATE TABLE series ( id   INTEGER PRIMARY KEY,
                               sort TEXT COLLATE NOCASE,
                               UNIQUE (name)
                              );
-CREATE TABLE tags ( id   INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE tags ( id   INTEGER PRIMARY KEY,
                             name TEXT NOT NULL COLLATE NOCASE,
                             UNIQUE (name)
                              );
@@ -79,3 +79,4 @@ CREATE TABLE data ( id     INTEGER PRIMARY KEY,
                             name TEXT NON NULL,
                             UNIQUE(book, format)
 );
+

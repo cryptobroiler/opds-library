@@ -31,16 +31,21 @@ public enum SQLQuery {
     INSERT_PUBLISHERS("insert into publishers values (?,?,?)"),
     INSERT_BOOKS_AUTHORS("insert into books_authors values (?,?,?)"),
     INSERT_BOOKS_TAGS("insert into books_tags values (?,?,?)"),
+    INSERT_BOOKS_SERIES("insert into books_series values (?,?,?)"),
     SELECT_ALL_BOOKS("select * from books"),
     SELECT_ALL_AUTHORS("select * from authors"),
+    SELECT_ALL_TAGS("select * from tags"),
+    SELECT_ALL_SERIES("select * from series"),
     SELECT_BOOKS_AUTHORS("select * from books_authors"),
     SELECT_BOOKS_TAGS("select * from books_tags"),
+    SELECT_BOOKS_SERIES("select * from books_series"),
     SELECT_AUTHORS_BY_BOOKID(
             "select authors.authorid,authors.firstname,authors.middlename,authors.lastname from authors,books,books_authors "
                     + "where books_authors.bookid=books.bookid and books_authors.authorid = authors.authorid and books.bookid=?"),
     SELECT_BOOK_COUNT("select count(id) from books"),
     SELECT_AUTHOR_COUNT("select count(id) from authors"),
-    SELECT_TAG_COUNT("select count(id) from tags");
+    SELECT_TAG_COUNT("select count(id) from tags"),
+    SELECT_SERIES_COUNT("select count(id) from series");
     private String query;
 
     private SQLQuery(String sqlQuery) {
