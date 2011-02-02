@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -23,7 +22,6 @@ import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
-import org.highscreen.library.database.DBController;
 import org.highscreen.library.database.SQLQuery;
 import org.highscreen.library.datamodel.Book;
 
@@ -46,9 +44,8 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
             "lib.libjoinedbooks.sql", "lib.libseqname.sql", "lib.libseq.sql",
             "lib.libtranslator.sql", "lib.libfilename.sql", "lib.librate.sql",
             "lib.libsrclang.sql", };// "lib.b.annotations.sql",
-    // "lib.b.annotations_pics.sql" };
-    private static final int FLIBUSTA_SOURCE_ID = 0;
 
+    // "lib.b.annotations_pics.sql" };
     void readMapOfRemoteGoodAuthorIDByRemoteBadAuthorID() {
         List<String[]> values = readValuesFromFile(filenames[5]);
         for (String[] value : values) {
@@ -95,7 +92,6 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
         logger.debug("Extraction complete: "
                 + (System.currentTimeMillis() - start) + "ms");
     }
-
 
     protected void fetchFlibustaDB() {
         try {
@@ -343,8 +339,6 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
                     valuesMap.put("sort", sort);
                     key++;
                 } else {
-                    // logger.debug("Duplicate entry: " + name.toLowerCase()
-                    // + " counter:" + key);
                     mapOfLocalAuthorIDByRemoteAuthorID.put(remoteAuthorID,
                             mapOfLocalAuthorIDByAuthorName.get(name
                                     .toLowerCase()));
@@ -438,8 +432,6 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
                     valuesMap.put("name", tag);
                     key++;
                 } else { // duplicate
-                    // logger.debug("Duplicate TAG entry:" + tag.toLowerCase()
-                    // + " counter: " + key);
                     mapOfLocalTagIDByRemoteTagID.put(remoteTagID,
                             mapOfLocalTagIDByTagName.get(tag.toLowerCase()));
                     dups++;
@@ -466,8 +458,6 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
                 Integer localTagID = mapOfLocalTagIDByRemoteTagID
                         .get(remoteTagID);
                 if (localBookID == null || localTagID == null) {
-                    // logger.warn("Pair match not found for: (bookID="
-                    // + remoteBookID + "; tagID=" + remoteTagID + ")");
                     miss++;
                     continue;
                 }
@@ -513,8 +503,6 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
                     localSeriesValues.put(key, valuesMap);
                     key++;
                 } else {
-                    // logger.debug("Duplicate entry: " + name.toLowerCase()
-                    // + " counter:" + key);
                     mapOfLocalSeriesIDByRemoteSeriesID.put(remoteSeriesID,
                             mapOfLocalSeriesIDBySeriesName.get(name
                                     .toLowerCase()));
@@ -544,8 +532,6 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
                 Integer localSeriesID = mapOfLocalSeriesIDByRemoteSeriesID
                         .get(remoteSeriesID);
                 if (localBookID == null || localSeriesID == null) {
-                    // logger.warn("Pair match not found for: (bookID="
-                    // + remoteBookID + "; tagID=" + remoteTagID + ")");
                     miss++;
                     continue;
                 }
@@ -619,7 +605,8 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
     }
 
     public FlibustaLibraryAdapter() {
-        super("flibusta.db");
+        //super("$MYSQL$//localhost:3306/flibusta");
+        super("$SQLITE$flibusta.db");
         if (isUpdateNeeded()) {
             fetchFlibustaDB();
             importFlibustaToSQLiteDB();
@@ -635,6 +622,6 @@ public class FlibustaLibraryAdapter extends SQLiteLibraryAdapter {
 
     @Override
     public boolean isUpdateNeeded() {
-        return false;
+        return true;
     }
 }

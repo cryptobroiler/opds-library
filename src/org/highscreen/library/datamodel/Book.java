@@ -3,32 +3,26 @@ package org.highscreen.library.datamodel;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Book {
+public class Book extends AbstractEntity{
     private List<Author> authors = new ArrayList<Author>();
     private String authorSort;
     private String fileType;
-    private String id;
     private String isbn;
     private String path;
     private Series series;
     private String seriesIndex;
     private String sort;
     private List<Tag> tags = new ArrayList<Tag>();
-
     private String timeStamp;
-
     private String title;
-
-    private String uri;
 
     public Book(String id, String title, String sort, String timeStamp,
             String uri, String seriesIndex, String authorSort, String isbn,
             String path) {
-        this.id = id;
+        super(id);
         this.title = title;
         this.sort = sort;
         this.timeStamp = timeStamp;
-        this.uri = uri;
         this.seriesIndex = seriesIndex;
         this.authorSort = authorSort;
         this.isbn = isbn;
@@ -55,14 +49,6 @@ public class Book {
         return fileType;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public String getID() {
-        return id;
-    }
-
     public String getIsbn() {
         return isbn;
     }
@@ -82,9 +68,11 @@ public class Book {
     public String getSort() {
         return sort;
     }
+
     public List<Tag> getTags() {
         return tags;
     }
+
     public String getTimeStamp() {
         return timeStamp;
     }
@@ -103,10 +91,6 @@ public class Book {
 
     public void setFileType(String fileType) {
         this.fileType = fileType;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public void setIsbn(String isbn) {
@@ -146,6 +130,19 @@ public class Book {
         return getID() + " - " + getTitle() + " - " + getTimeStamp() + " - "
                 + getSeriesIndex() + " in " + getSeries() + " - main author: "
                 + getAuthorSort() + " more authors: " + getAuthors().toString()
-                + " isbn: " + getIsbn() + " path: " + getPath() + " tags: " + getTags();
+                + " isbn: " + getIsbn() + " path: " + getPath() + " tags: "
+                + getTags();
     }
+
+    @Override
+    public String getFieldToSplit() {
+        return getSort();
+    }
+
+    @Override
+    public String getFieldToCompare() {
+        return getSort();
+    }
+
+
 }

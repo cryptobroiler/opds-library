@@ -25,31 +25,29 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
     private List<Series> listOfSeries;
     private Map<String, Author> mapOfAuthors;
     private Map<String, Series> mapOfSeries;
-    private Map<String, Book> mapOfBooks;
     private Map<String, Tag> mapOfTags;
     private Map<Author, List<Book>> mapOfBooksByAuthor;
+    private Map<Tag, List<Book>> mapOfBooksByTag;
     private Map<String, List<Author>> mapOfAuthorsByBookID;
     private Map<String, List<Series>> mapOfSeriesByBookID;
     private Map<String, List<Tag>> mapOfTagsByBookID;
     private static final Logger logger = Logger
             .getLogger(SQLiteLibraryAdapter.class);
-    private String databaseName;
 
     public String getDatabaseName() {
-        return databaseName;
+        return db.getDBPath();
     }
 
     private DBController db = null;
 
     protected void makeCleanDatabase() {
-        FileUtils.deleteQuietly(new File(databaseName));
+        FileUtils.deleteQuietly(new File(db.getDBPath()));
         try {
             db.runScript(new FileReader("res/metadata_sqlite.sql"));
         } catch (Exception e) {
             logger.error(e);
         }
     }
-
 
     protected DBController getDB() {
         return db;
@@ -66,7 +64,6 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
     }
 
     public SQLiteLibraryAdapter(String dbName) {
-        databaseName = dbName;
         db = DBController.getInstance(dbName);
         clear();
         if (isUpdateNeeded()) {
@@ -81,7 +78,6 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
         listOfTags = null;
         listOfSeries = null;
         mapOfAuthors = null;
-        mapOfBooks = null;
         mapOfTags = null;
         mapOfSeries = null;
         mapOfBooksByAuthor = null;
@@ -108,6 +104,24 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
             }
         }
         return mapOfBooksByAuthor;
+    }
+
+    @Override
+    public Map<Tag, List<Book>> getMapOfBooksByTag() {
+        if (mapOfBooksByTag == null) {
+            mapOfBooksByTag = new HashMap<Tag, List<Book>>();
+            for (Book book : getListOfBooks()) {
+                for (Tag tag : book.getTags()) {
+                    List<Book> books = mapOfBooksByTag.get(tag);
+                    if (books == null) {
+                        books = new ArrayList<Book>();
+                        mapOfBooksByTag.put(tag, books);
+                    }
+                    books.add(book);
+                }
+            }
+        }
+        return mapOfBooksByTag;
     }
 
     @Override
@@ -346,7 +360,4 @@ public abstract class SQLiteLibraryAdapter implements LibraryAdapter {
         }
         return mapOfAuthors;
     }
-    // public getListOfAuthorsByBookId() {
-    //
-    // }
 }

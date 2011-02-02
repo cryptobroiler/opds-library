@@ -1,21 +1,16 @@
 package org.highscreen.library.datamodel;
 
 
-public class Series{
-    private String id;
+public class Series extends AbstractEntity{
     private String name;
     private String sort;
 
     public Series(String id, String name, String sort) {
-        super();
-        this.id = id;
+        super(id);
         this.name = name;
         this.sort = sort;
     }
 
-    public String getID() {
-        return id;
-    }
 
     public String getName() {
         return name;
@@ -39,5 +34,14 @@ public class Series{
 
     public String getTitleToSplitByLetter(Object options) {
         return getName();
+    }
+
+    @Override
+    public String getFieldToSplit() {
+        return getSort();
+    }
+    @Override
+    public String getFieldToCompare() {
+        return getSort();
     }
 }

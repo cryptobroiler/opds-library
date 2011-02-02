@@ -1,9 +1,6 @@
 package org.highscreen.library.adapters;
 
-import java.util.List;
-
 import org.apache.log4j.Logger;
-import org.highscreen.library.datamodel.Book;
 import org.highscreen.library.datamodel.DataModel;
 
 public class Test {

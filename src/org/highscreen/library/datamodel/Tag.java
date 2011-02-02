@@ -1,16 +1,9 @@
 package org.highscreen.library.datamodel;
 
-public class Tag {
-    private String id;
+public class Tag extends AbstractEntity {
     private String name;
 
-    public void setID(String id) {
-        this.id = id;
-    }
 
-    public String getID() {
-        return id;
-    }
 
     public void setName(String name) {
         this.name = name;
@@ -21,14 +14,22 @@ public class Tag {
     }
 
     public Tag(String id, String name) {
-        this.id = id;
+        super(id);
         this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return getID() + " - " + getName();
+    }
+
+    @Override
+    public String getFieldToSplit() {
+        return getName();
     }
     
     @Override
-    public String toString() {
-        // TODO Auto-generated method stub
-        return getID() + " - " + getName();
+    public String getFieldToCompare() {
+        return getName();
     }
-    
 }

@@ -17,4 +17,6 @@ public interface LibraryAdapter {
     public boolean isUpdateNeeded();
 
     public Map<Author, List<Book>> getMapOfBooksByAuthor();
+
+    public Map<Tag, List<Book>> getMapOfBooksByTag();
 }

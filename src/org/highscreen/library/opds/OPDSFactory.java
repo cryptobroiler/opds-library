@@ -1,8 +1,5 @@
 package org.highscreen.library.opds;
 
-import java.text.MessageFormat;
-import java.util.List;
-
 import org.highscreen.library.datamodel.Author;
 import org.highscreen.library.datamodel.Book;
 import org.highscreen.library.datamodel.Tag;
@@ -21,7 +18,8 @@ public class OPDSFactory {
         Dc("dc", "http://purl.org/dc/elements/1.1/"),
         DcTerms("dcterms", "http://purl.org/dc/terms"),
         Calibre("calibre", "http://calibre.kovidgoyal.net/2009/metadata"),
-        Xhtml("xhtml", "http://www.w3.org/1999/xhtml");
+        Xhtml("xhtml", "http://www.w3.org/1999/xhtml"),
+        OpenSearch("opensearch", "http://a9.com/-/spec/opensearch/1.1/");
         private org.jdom.Namespace jdomNamespace;
 
         private Namespace(String prefix, String uri) {
@@ -78,22 +76,20 @@ public class OPDSFactory {
     }
 
     private Element createBookEntry(Book b) {
-        Element entry = createElement("entry");
-        String sTitle = b.getTitle();
-        Element title = createElement("title").addContent(sTitle);
-        entry.addContent(title);
-        Element id = createElement("id").addContent(
-                "flibusta:book:" + b.getID());
-        entry.addContent(id);
-        if (b.getAuthors().size() > 0) {
-            Element author = createElement("author").addContent(
+        boolean hasAuthor = b.getAuthors().size() > 0;
+        Element author = null;
+        if (hasAuthor) {
+            author = createElement("author").addContent(
                     createElement("name").addContent(
                             b.getAuthors().get(0).getName()).addContent(
                             createElement("uri").addContent(
                                     "author_" + b.getAuthors().get(0).getID()
                                             + ".xml")));
-            entry.addContent(author);
         }
+        Element entry = createOPDSEntry(b.getTitle(), b.getID(), null,
+                hasAuthor ? b.getAuthorSort() : null, null);
+        if (author != null)
+            entry.addContent(author);
         entry.addContent(createLinkElement(b.getPath(), "application/epub+zip",
                 "http://opds-spec.org/acquisition", null));
         return entry;
@@ -108,6 +104,18 @@ public class OPDSFactory {
         if (namespace != null) {
             result.setNamespace(namespace.getJDOMNamespace());
         }
+        return result;
+    }
+
+    public Element createOpenSearchTotalResultsElement(int results) {
+        Element result = createElement("totalResults", Namespace.OpenSearch);
+        result.addContent(String.valueOf(results));
+        return result;
+    }
+    
+    public Element createOpenSearchItemsPerPageElement(int itemsPerPage) {
+        Element result = createElement("itemsPerPage", Namespace.OpenSearch);
+        result.addContent(String.valueOf(itemsPerPage));
         return result;
     }
 
@@ -145,6 +153,20 @@ public class OPDSFactory {
 
     public String getLinkTypeForFeed() {
         return "application/atom+xml;type=feed;profile=opds-catalog";
+    }
+
+    public String getLinkTypeForOpenSearch() {
+        return "application/opensearchdescription+xml";
+    }
+
+    public Element createOpenSearchDescriptionLink(String url) {
+        return createLinkElement(url, getLinkTypeForOpenSearch(), "search",
+                "Search in this catalog");
+    }
+    
+    public Element createNextLink(String url) {
+        return createLinkElement(url, "application/atom+xml", "next",
+        "next elements");
     }
 
     public Element createXmlLinkElement(String url, String relation,

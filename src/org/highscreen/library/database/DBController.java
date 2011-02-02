@@ -5,7 +5,6 @@ import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -16,13 +15,13 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-public class DBController {
+public abstract class DBController {
     private static final String DEFAULT_DELIMETER = ";";
     private static final Logger logger = Logger.getLogger(DBController.class);
     private static Map<String, DBController> controllersMap = new HashMap<String, DBController>();
     private Map<SQLQuery, PreparedStatement> preparedStatements = new HashMap<SQLQuery, PreparedStatement>();
-    private String dataBasePath;
-    private Connection connection;
+    protected String dataBasePath;
+    protected Connection connection;
 
     public Connection getConnection() {
         if (connection == null) {
@@ -31,28 +30,30 @@ public class DBController {
         return connection;
     }
 
-    private DBController(String dbPath) {
+    protected DBController(String dbPath) {
         dataBasePath = dbPath;
+    }
+    public String getDBPath() {
+        return dataBasePath;
     }
 
     public static DBController getInstance(String dbPath) {
         DBController c = controllersMap.get(dbPath);
         if (c == null) {
-            c = new DBController(dbPath);
+            if (dbPath.startsWith("$SQLITE$")) {
+                c = new SQLiteDBController(dbPath.replaceFirst("$SQLITE$", ""));
+            } else {
+                if (dbPath.startsWith("$MYSQL$")) {
+                    c = new MySQLDBController(
+                            dbPath.replaceFirst("$MYSQL$", ""));
+                }
+            }
             controllersMap.put(dbPath, c);
         }
         return c;
     }
 
-    private void initConnection() {
-        try {
-            Class.forName("org.sqlite.JDBC");
-            connection = DriverManager.getConnection("jdbc:sqlite:"
-                    + dataBasePath);
-        } catch (Exception e) {
-            logger.error(e);
-        }
-    }
+    protected abstract void initConnection();
 
     public PreparedStatement getPreparedStatement(SQLQuery query) {
         PreparedStatement preparedStatement = preparedStatements.get(query);
@@ -81,7 +82,6 @@ public class DBController {
         try {
             getConnection().commit();
         } catch (SQLException e) {
-            // TODO Auto-generated catch block
             logger.error(e);
         }
     }
@@ -175,7 +175,7 @@ public class DBController {
                 Map<String, String> value = mapOfValues.get(key);
                 for (int i = 1; i <= columns.size(); i++) {
                     String column = columns.get(i - 1);
-                    //logger.debug("setting column " + column);
+                    // logger.debug("setting column " + column);
                     ps.setString(i, value.get(column));
                 }
                 ps.addBatch();
@@ -184,9 +184,7 @@ public class DBController {
             commit();
             enableAutoCommit(true);
         } catch (SQLException e) {
-            e.printStackTrace();
-            //logger.error(e);
-            // TODO: handle exception
+            logger.error(e);
         }
     }
 }
